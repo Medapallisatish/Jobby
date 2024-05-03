@@ -1,0 +1,34 @@
+* {
+  font-family: 'roboto';
+  box-sizing: border-box;
+  margin: 0px;
+}
+.home-container {
+  background-image: url('https://assets.ccbp.in/frontend/react-js/home-lg-bg.png');
+  background-size: cover;
+  height: 100vh;
+  padding: 35px;
+}
+
+.text-cont {
+  margin-right: 650px;
+}
+.home-heading {
+  color: white;
+  margin-top: 35px;
+  font-size: 65px;
+}
+.home-para {
+  color: white;
+  margin-top: 35px;
+  font-size: 30px;
+}
+.find {
+  background-color: #6366f1;
+  color: white;
+  padding: 13px;
+  border-style: none;
+  outline: none;
+  border-radius: 5px;
+  margin-top: 25px;
+}
