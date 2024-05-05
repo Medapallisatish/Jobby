@@ -46,10 +46,47 @@ const salaryRangesList = [
 ]
 
 class JobsRoute extends Component {
-  state = {profileList: [], jobsList: []}
+  state = {
+    profileList: [],
+    jobsList: [],
+    searchInput: '',
+    selectedEmploymentTypes: [],
+  }
 
   componentDidMount() {
     this.renderProfile()
+    this.renderJobsApi()
+  }
+
+  searchBox = event => {
+    this.setState({searchInput: event.target.value})
+  }
+
+  filterJobs = event => {
+    const {value, checked} = event.target
+    this.setState(prevState => {
+      const {jobsList, selectedEmploymentTypes} = prevState
+      let filteredJobs = [...jobsList]
+
+      if (checked) {
+        filteredJobs = filteredJobs.filter(
+          jobItem => jobItem.employmentType === value,
+        )
+      } else {
+        filteredJobs = filteredJobs.filter(
+          jobItem => jobItem.employmentType !== value,
+        )
+      }
+
+      const updatedSelectedEmploymentTypes = checked
+        ? [...selectedEmploymentTypes, value]
+        : selectedEmploymentTypes.filter(type => type !== value)
+
+      return {
+        selectedEmploymentTypes: updatedSelectedEmploymentTypes,
+        jobsList: filteredJobs,
+      }
+    })
   }
 
   renderProfile = async () => {
@@ -83,8 +120,8 @@ class JobsRoute extends Component {
       <div className="profile-container">
         <div className="profile">
           <img src={profileImageUrl} alt="profileImage" />
-          <h1>{name}</h1>
-          <p>{shortBio}</p>
+          <h1 style={{color: '#4f46e5'}}>{name}</h1>
+          <p style={{color: '#7e858e'}}>{shortBio}</p>
         </div>
       </div>
     )
@@ -120,36 +157,21 @@ class JobsRoute extends Component {
     }
   }
 
-  renderJobs = () => {
-    const {jobsList} = this.state
-    const {
-      companyLogoUrl,
-      employmentType,
-      jobDescription,
-      location,
-      packagePerAnnum,
-      rating,
-      title,
-    } = jobsList
-
-    return (
-      <ul className="jobs-unordered">
-        <img src={companyLogoUrl} alt="app" />
-        <h2>{title}</h2>
-        <IoMdStar />
-        <p>{rating}</p>
-        <ImLocation2 />
-        <p>{location}</p>
-        <BsFillBagFill />
-        <p>{employmentType}</p>
-        <p>{packagePerAnnum}</p>
-        <hr />
-        <p>{jobDescription}</p>
-      </ul>
-    )
-  }
-
   render() {
+    const {searchInput, selectedEmploymentTypes, jobsList} = this.state
+
+    let filteredJobs = [...jobsList]
+
+    if (selectedEmploymentTypes.length > 0) {
+      filteredJobs = filteredJobs.filter(jobItem =>
+        selectedEmploymentTypes.includes(jobItem.employmentTypeId),
+      )
+    }
+
+    const FilteredList = filteredJobs.filter(jobItem =>
+      jobItem.title.toLowerCase().includes(searchInput.toLowerCase()),
+    )
+
     return (
       <div className="job-container">
         <div className="profile-container">
@@ -161,7 +183,12 @@ class JobsRoute extends Component {
           <ul className="unordered">
             {employmentTypesList.map(each => (
               <li key={each.employmentTypeId} className="listed">
-                <input type="checkbox" className="checkbox" />
+                <input
+                  type="checkbox"
+                  className="checkbox"
+                  value={each.employmentTypeId}
+                  onChange={this.filterJobs}
+                />
                 <label className="label-name" htmlFor={each.employmentTypeId}>
                   {each.label}
                 </label>{' '}
@@ -175,7 +202,11 @@ class JobsRoute extends Component {
           <ul className="unordered">
             {salaryRangesList.map(each => (
               <li key={each.salaryRangeId} className="listed">
-                <input type="checkbox" />
+                <input
+                  type="checkbox"
+                  onChange={this.filterJobs}
+                  value={this.selectedEmploymentTypes}
+                />
                 <label className="label-name" htmlFor={each.salaryRangeId}>
                   {each.label}
                 </label>
@@ -185,12 +216,51 @@ class JobsRoute extends Component {
         </div>
         <div className="search-container">
           <div className="search-box">
-            <input type="search" className="search-bar" placeholder="Search" />
+            <input
+              type="search"
+              className="search-bar"
+              placeholder="Search"
+              onChange={this.searchBox}
+              value={this.searchInput}
+            />
             <div className="search">
               <FcSearch className="search-icon" />
             </div>
           </div>
-          <ul>{this.renderJobs()}</ul>
+          <ul>
+            {FilteredList.map(jobItem => (
+              <li key={jobItem.id} className="list-jobdetails">
+                <div className="heading-container">
+                  <img
+                    src={jobItem.companyLogoUrl}
+                    alt="job details company logo"
+                    className="job-image"
+                  />
+                  <div className="heading-rating">
+                    <h1>{jobItem.title}</h1>
+                    <div className="star-container">
+                      <IoMdStar className="star" />
+                      <p>{jobItem.rating}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="package">
+                  <div className="loc-emp">
+                    <ImLocation2 />
+                    <p style={{marginLeft: '5px'}}>{jobItem.location}</p>
+
+                    <BsFillBagFill style={{marginLeft: '12px'}} />
+
+                    <p style={{marginLeft: '5px'}}>{jobItem.employmentType}</p>
+                  </div>
+                  <p style={{marginTop: '15px'}}>{jobItem.packagePerAnnum}</p>
+                </div>
+                <hr />
+                <h2 style={{marginTop: '15px'}}>Description</h2>
+                <p style={{marginTop: '15px'}}>{jobItem.jobDescription}</p>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     )
