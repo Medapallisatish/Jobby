@@ -50,7 +50,8 @@ class JobsRoute extends Component {
     profileList: [],
     jobsList: [],
     searchInput: '',
-    selectedEmploymentTypes: [],
+    EmployList: [],
+    selectedSalaryRangeId: '',
   }
 
   componentDidMount() {
@@ -60,33 +61,6 @@ class JobsRoute extends Component {
 
   searchBox = event => {
     this.setState({searchInput: event.target.value})
-  }
-
-  filterJobs = event => {
-    const {value, checked} = event.target
-    this.setState(prevState => {
-      const {jobsList, selectedEmploymentTypes} = prevState
-      let filteredJobs = [...jobsList]
-
-      if (checked) {
-        filteredJobs = filteredJobs.filter(
-          jobItem => jobItem.employmentType === value,
-        )
-      } else {
-        filteredJobs = filteredJobs.filter(
-          jobItem => jobItem.employmentType !== value,
-        )
-      }
-
-      const updatedSelectedEmploymentTypes = checked
-        ? [...selectedEmploymentTypes, value]
-        : selectedEmploymentTypes.filter(type => type !== value)
-
-      return {
-        selectedEmploymentTypes: updatedSelectedEmploymentTypes,
-        jobsList: filteredJobs,
-      }
-    })
   }
 
   renderProfile = async () => {
@@ -120,15 +94,16 @@ class JobsRoute extends Component {
       <div className="profile-container">
         <div className="profile">
           <img src={profileImageUrl} alt="profileImage" />
-          <h1 style={{color: '#4f46e5'}}>{name}</h1>
-          <p style={{color: '#7e858e'}}>{shortBio}</p>
+          <h1 style={{color: 'blue+  '}}>{name}</h1>
+          <p style={{color: 'black'}}>{shortBio}</p>
         </div>
       </div>
     )
   }
 
   renderJobsApi = async () => {
-    const JobsUrl = 'https://apis.ccbp.in/jobs'
+    const {EmployList, selectedSalaryRangeId, searchInput} = this.state
+    const JobsUrl = `https://apis.ccbp.in/jobs?employment_type=${EmployList}&package_per_annum=${selectedSalaryRangeId}&search=${searchInput}`
     const jwtJobsToken = Cookies.get('jwt_token')
 
     const JobOptions = {
@@ -139,10 +114,8 @@ class JobsRoute extends Component {
       },
     }
     const response = await fetch(JobsUrl, JobOptions)
-    console.log(response)
     if (response.ok === true) {
       const jobData = await response.json()
-      console.log(jobData)
       const updatedJobsData = jobData.jobs.map(jobItem => ({
         companyLogoUrl: jobItem.company_logo_url,
         employmentType: jobItem.employment_type,
@@ -153,25 +126,58 @@ class JobsRoute extends Component {
         rating: jobItem.rating,
         title: jobItem.title,
       }))
+
       this.setState({jobsList: updatedJobsData})
     }
   }
 
-  render() {
-    const {searchInput, selectedEmploymentTypes, jobsList} = this.state
-
-    let filteredJobs = [...jobsList]
-
-    if (selectedEmploymentTypes.length > 0) {
-      filteredJobs = filteredJobs.filter(jobItem =>
-        selectedEmploymentTypes.includes(jobItem.employmentTypeId),
+  EmployLists = event => {
+    const {EmployList} = this.state
+    const CheckboxNotInLists = EmployList.filter(
+      each => each === event.target.id,
+    )
+    if (CheckboxNotInLists.length === 0) {
+      this.setState(
+        prevState => ({
+          EmployList: [...prevState.EmployList, event.target.id],
+        }),
+        this.renderJobsApi,
+      )
+    } else {
+      const filterData = EmployList.filter(each => each !== event.target.id)
+      this.setState(
+        {
+          EmployList: filterData,
+        },
+        this.renderJobsApi,
       )
     }
+  }
 
-    const FilteredList = filteredJobs.filter(jobItem =>
-      jobItem.title.toLowerCase().includes(searchInput.toLowerCase()),
-    )
+  SalaryLists = event => {
+    const {selectedSalaryRangeId} = this.state
+    const salaryRangeId = event.target.id
+    const isChecked = event.target.checked
 
+    if (isChecked) {
+      this.setState({selectedSalaryRangeId: salaryRangeId}, this.renderJobsApi)
+    } else {
+      this.setState({selectedSalaryRangeId: ' '}, this.renderJobsApi)
+    }
+  }
+
+  buttonSearch = () => {
+    this.renderJobsApi()
+  }
+
+  searchInputDown = event => {
+    if (event.key === 'Enter') {
+      this.renderJobsApi()
+    }
+  }
+
+  render() {
+    const {jobsList, searchInput, selectedSalaryRangeId} = this.state
     return (
       <div className="job-container">
         <div className="profile-container">
@@ -184,10 +190,11 @@ class JobsRoute extends Component {
             {employmentTypesList.map(each => (
               <li key={each.employmentTypeId} className="listed">
                 <input
+                  onChange={this.EmployLists}
+                  value={each.label}
                   type="checkbox"
                   className="checkbox"
-                  value={each.employmentTypeId}
-                  onChange={this.filterJobs}
+                  id={each.employmentTypeId}
                 />
                 <label className="label-name" htmlFor={each.employmentTypeId}>
                   {each.label}
@@ -203,9 +210,11 @@ class JobsRoute extends Component {
             {salaryRangesList.map(each => (
               <li key={each.salaryRangeId} className="listed">
                 <input
-                  type="checkbox"
-                  onChange={this.filterJobs}
-                  value={this.selectedEmploymentTypes}
+                  type="radio"
+                  value={each.salaryRangeId} // Update value prop
+                  checked={selectedSalaryRangeId === each.salaryRangeId}
+                  onChange={this.SalaryLists}
+                  id={each.salaryRangeId}
                 />
                 <label className="label-name" htmlFor={each.salaryRangeId}>
                   {each.label}
@@ -220,44 +229,51 @@ class JobsRoute extends Component {
               type="search"
               className="search-bar"
               placeholder="Search"
+              value={searchInput}
               onChange={this.searchBox}
-              value={this.searchInput}
+              onKeyDown={this.searchInputDown}
             />
-            <div className="search">
+            <button
+              className="search"
+              onClick={this.buttonSearch}
+              type="button"
+              data-testid="searchButton"
+              aria-label="Search"
+            >
               <FcSearch className="search-icon" />
-            </div>
+            </button>
           </div>
           <ul>
-            {FilteredList.map(jobItem => (
-              <li key={jobItem.id} className="list-jobdetails">
-                <div className="heading-container">
+            {jobsList.map(jobItem => (
+              <li value={this.SalaryList} className="list-jobdetails">
+                <div className="container">
                   <img
                     src={jobItem.companyLogoUrl}
                     alt="job details company logo"
                     className="job-image"
                   />
-                  <div className="heading-rating">
+                  <div className="title-rating">
                     <h1>{jobItem.title}</h1>
-                    <div className="star-container">
+                    <div className="star-rating">
                       <IoMdStar className="star" />
                       <p>{jobItem.rating}</p>
                     </div>
                   </div>
                 </div>
-                <div className="package">
+
+                <div className="location-employment">
                   <div className="loc-emp">
                     <ImLocation2 />
-                    <p style={{marginLeft: '5px'}}>{jobItem.location}</p>
+                    <p style={{marginLeft: '8px'}}>{jobItem.location}</p>
 
-                    <BsFillBagFill style={{marginLeft: '12px'}} />
-
-                    <p style={{marginLeft: '5px'}}>{jobItem.employmentType}</p>
+                    <BsFillBagFill style={{marginLeft: '13px'}} />
+                    <p style={{marginLeft: '8px'}}>{jobItem.employmentType}</p>
                   </div>
-                  <p style={{marginTop: '15px'}}>{jobItem.packagePerAnnum}</p>
+                  <p>{jobItem.packagePerAnnum}</p>
                 </div>
                 <hr />
-                <h2 style={{marginTop: '15px'}}>Description</h2>
-                <p style={{marginTop: '15px'}}>{jobItem.jobDescription}</p>
+                <h2 style={{marginTop: '10px'}}>Description</h2>
+                <p style={{marginTop: '10px'}}>{jobItem.jobDescription}</p>
               </li>
             ))}
           </ul>
